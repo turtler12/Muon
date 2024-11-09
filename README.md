@@ -12,9 +12,12 @@ pip install git+https://github.com/KellerJordan/Muon
 
 ## Usage
 
-### Option 1: Implicit AdamW backup
+Training a language model? Then option 1 will be fine.
 
-Suitable for training language models.
+Training anything else? Use option 2.
+
+
+### Option 1: Implicit AdamW backup
 
 ```python
 from muon import Muon
@@ -28,10 +31,6 @@ This will automatically optimize all parameters which are <2D or are detected as
 
 ### Option 2: Explicit AdamW backup
 
-Use this if your model's classifier head has <10K outputs and therefore can't be automatically detected as such.
-
-This method is suitable for any model. You'll have to replace `model.body` and `model.head` with whatever's appropriate for your model.
-
 ```python
 from muon import Muon
 # optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)
@@ -41,6 +40,8 @@ adamw_params.extend(model.head.parameters())
 optimizer = Muon(muon_params, lr=0.02, momentum=0.95,
                  adamw_params=adaw_params, adamw_lr=3e-4, adamw_betas=(0.90, 0.95), adamw_wd=0.01)
 ```
+
+You'll have to replace `model.body` and `model.head` with whatever's appropriate for your model.
 
 ### Q: Why do we need the AdamW backup?
 Answer: Muon is only meant for optimizing >= 2D parameters, and it's not recommended for the embedding or classification head layers (this is similar to Shampoo and SOAP).
