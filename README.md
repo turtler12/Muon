@@ -1,7 +1,7 @@
 ## To use:
 
 
-```
+```python
 import torch
 from muon import Muon
 
