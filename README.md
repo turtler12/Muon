@@ -52,7 +52,7 @@ Alternately, you can explicitly filter the parameters and use an external backup
 
 For a comparison between AdamW, Shampoo, SOAP, and Muon for training a 124M-parameter transformer, see [here](https://github.com/KellerJordan/modded-nanogpt/tree/master/records/102924_Optimizers).
 
-## More info
+## Connection to Shampoo
 
 See [this thread](https://x.com/kellerjordan0/status/1844782418676339059) for more info including the connection to Shampoo
 
