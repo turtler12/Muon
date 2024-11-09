@@ -54,8 +54,8 @@ class Muon(torch.optim.Optimizer):
                  backup_adamw_eps=1e-8, backup_adamw_wd=0):
         assert all([p.ndim >= 2 for p in params])
         defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps,
-                        backup_adam_lr=backup_adam_lr, backup_adam_betas=backup_adam_betas,
-                        backup_adam_eps=backup_adam_eps, backup_adam_wd=0)
+                        backup_adamw_lr=backup_adamw_lr, backup_adamw_betas=backup_adamw_betas,
+                        backup_adamw_eps=backup_adamw_eps, backup_adamw_wd=0)
         super().__init__(params, defaults)
         if 'WORLD_SIZE' in os.environ:
             self.world_size = int(os.environ['WORLD_SIZE'])
@@ -115,10 +115,10 @@ class Muon(torch.optim.Optimizer):
             ############################
 
             params = [p for p in group['params'] if p.ndim < 2 or p.size(0) >= 10000]
-            lr = group['backup_adam_lr']
-            betas = group['backup_adam_betas']
-            eps = group['backup_adam_eps']
-            weight_decay = group['backup_adam_wd']
+            lr = group['backup_adamw_lr']
+            betas = group['backup_adamw_betas']
+            eps = group['backup_adamw_eps']
+            weight_decay = group['backup_adamw_wd']
 
             for p in params:
                 g = p.grad
