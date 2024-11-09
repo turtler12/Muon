@@ -14,7 +14,7 @@ pip install git+https://github.com/KellerJordan/Muon
 
 Training a language model? Then option 1 will be fine.
 
-Training anything else? Use option 2.
+Training anything else? Use option 2 so that Muon explicitly knows about your classifier head.
 
 
 ### Option 1: Implicit AdamW backup
