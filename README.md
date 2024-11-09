@@ -20,8 +20,7 @@ Warning: If your model has a classification layer with less than 10K outputs (so
 from muon import Muon
 # optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)
 optimizer = Muon(model.parameters(), lr=0.02, momentum=0.95,
-                 backup_adamw_lr=3e-4, backup_adamw_betas=(0.90, 0.95),
-                 backup_adamw_wd=0.01)
+                 adamw_lr=3e-4, adamw_betas=(0.90, 0.95), adamw_wd=0.01)
 ```
 
 ### Option 2: External AdamW backup

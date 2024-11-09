@@ -50,11 +50,11 @@ class Muon(torch.optim.Optimizer):
         ns_steps: The number of Newton-Schulz iterations to run.
     """
     def __init__(self, params, lr=0.02, momentum=0.95, nesterov=True, ns_steps=6,
-                 backup_adamw_lr=3e-4, backup_adamw_betas=(0.95, 0.95),
-                 backup_adamw_eps=1e-8, backup_adamw_wd=0):
+                 adamw_lr=3e-4, adamw_betas=(0.95, 0.95),
+                 adamw_eps=1e-8, adamw_wd=0):
         defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps,
-                        backup_adamw_lr_ratio=backup_adamw_lr/lr, backup_adamw_betas=backup_adamw_betas,
-                        backup_adamw_eps=backup_adamw_eps, backup_adamw_wd=backup_adamw_wd)
+                        adamw_lr_ratio=adamw_lr/lr, adamw_betas=adamw_betas,
+                        adamw_eps=adamw_eps, adamw_wd=adamw_wd)
         super().__init__(params, defaults)
         if 'WORLD_SIZE' in os.environ:
             self.world_size = int(os.environ['WORLD_SIZE'])
@@ -114,10 +114,10 @@ class Muon(torch.optim.Optimizer):
             ############################
 
             params = [p for p in group['params'] if p.ndim < 2 or p.size(0) >= 10000]
-            lr = group['backup_adamw_lr_ratio'] * group['lr'] # in order for lr schedule to work
-            beta1, beta2 = group['backup_adamw_betas']
-            eps = group['backup_adamw_eps']
-            weight_decay = group['backup_adamw_wd']
+            lr = group['adamw_lr_ratio'] * group['lr'] # in order for lr schedule to work
+            beta1, beta2 = group['adamw_betas']
+            eps = group['adamw_eps']
+            weight_decay = group['adamw_wd']
 
             for p in params:
                 g = p.grad
