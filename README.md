@@ -51,6 +51,13 @@ You'll have to replace `model.body`, `model.head`, and `model.embed` with whatev
 
 For a comparison between AdamW, Shampoo, SOAP, and Muon for training a 124M-parameter transformer, see [here](https://github.com/KellerJordan/modded-nanogpt/tree/master/records/102924_Optimizers).
 
+## Hyperparameter tuning
+
+If you're replacing an already-tuned AdamW with Muon, the only thing you should need to tune is Muon's learning rate.
+In particular, the momentum 0.95 should be generally close to optimal.
+
+The biggest gains over AdamW should be expected when training with a large batch size.
+
 ## Connection to Shampoo
 
 See [this thread](https://x.com/kellerjordan0/status/1844782418676339059) for more info including the connection to Shampoo.
