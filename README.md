@@ -36,7 +36,8 @@ This method is suitable for any model. You'll have to replace `model.body` and `
 from muon import Muon
 # optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)
 muon_params = [p for p in model.body.parameters() if p.ndim >= 2]
-adamw_params = [p for p in model.body.parameters() if p.ndim < 2] + list(model.head.parameters())
+adamw_params = [p for p in model.body.parameters() if p.ndim < 2]
+adamw_params.extend(model.head.parameters())
 optimizer = Muon(muon_params, lr=0.02, momentum=0.95,
                  adamw_params=adaw_params, adamw_lr=3e-4, adamw_betas=(0.90, 0.95), adamw_wd=0.01)
 ```
