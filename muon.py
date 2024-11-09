@@ -60,6 +60,8 @@ class Muon(torch.optim.Optimizer):
             if p.ndim < 2:
                 raise Exception('Encountered parameter with shape %s in Muon. \
 Muon should only be used with >=2D parameters.' % p.shape)
+            if p.ndim > 2:
+                raise NotImplementedError('Higher than 2D parameters are not yet implemented.')
             if p.size(0) >= 10000:
                 import warnings
                 warnings.warn('Encountered parameter with shape %s in Muon. \
