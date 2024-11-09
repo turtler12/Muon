@@ -53,7 +53,7 @@ class Muon(torch.optim.Optimizer):
                  backup_adamw_lr=3e-4, backup_adamw_betas=(0.95, 0.95),
                  backup_adamw_eps=1e-8, backup_adamw_wd=0):
         defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps,
-                        backup_adamw_lr=backup_adamw_lr, backup_adamw_betas=backup_adamw_betas,
+                        backup_adamw_lr_ratio=backup_adamw_lr/lr, backup_adamw_betas=backup_adamw_betas,
                         backup_adamw_eps=backup_adamw_eps, backup_adamw_wd=0)
         super().__init__(params, defaults)
         if 'WORLD_SIZE' in os.environ:
@@ -114,7 +114,7 @@ class Muon(torch.optim.Optimizer):
             ############################
 
             params = [p for p in group['params'] if p.ndim < 2 or p.size(0) >= 10000]
-            lr = group['backup_adamw_lr']
+            lr = group['backup_adamw_lr_ratio'] * group['lr'] # in order for lr schedule to work
             beta1, beta2 = group['backup_adamw_betas']
             eps = group['backup_adamw_eps']
             weight_decay = group['backup_adamw_wd']
