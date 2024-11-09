@@ -50,8 +50,8 @@ class Muon(torch.optim.Optimizer):
         ns_steps: The number of Newton-Schulz iterations to run.
     """
     def __init__(self, params, lr=0.02, momentum=0.95, nesterov=True, ns_steps=6,
-                 backup_adam_lr=3e-4, backup_adam_betas=(0.95, 0.95),
-                 backup_adam_eps=1e-8, backup_adam_wd=0):
+                 backup_adamw_lr=3e-4, backup_adamw_betas=(0.95, 0.95),
+                 backup_adamw_eps=1e-8, backup_adamw_wd=0):
         assert all([p.ndim >= 2 for p in params])
         defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps,
                         backup_adam_lr=backup_adam_lr, backup_adam_betas=backup_adam_betas,
