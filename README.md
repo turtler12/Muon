@@ -15,9 +15,8 @@ pip install git+https://github.com/KellerJordan/Muon
 Muon is intended for only the internal >= 2D parameters of a network. Any embedding, lm_head, or <2D parameters should be optimized using a different backup optimizer (e.g., AdamW).
 Muon provides two ways to accomplish this.
 
-Training a language model? Then option 1 will be fine.
-
-Training anything else? Use option 2 so that Muon explicitly knows about your classifier head.
+* Training a language model? Then option 1 will be fine.
+* Training anything else? Use option 2 so that Muon explicitly knows about your classifier head.
 
 
 ### Option 1: Implicit AdamW backup
