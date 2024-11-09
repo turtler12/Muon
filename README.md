@@ -12,6 +12,9 @@ pip install git+https://github.com/KellerJordan/Muon
 
 ## Usage
 
+Muon is be used to optimize only the internal >= 2D parameters of the network. The embedding, lm_head, and any <2D parameters must be optimized using a different backup optimizer.
+Muon provides two ways to accomplish this.
+
 Training a language model? Then option 1 will be fine.
 
 Training anything else? Use option 2 so that Muon explicitly knows about your classifier head.
