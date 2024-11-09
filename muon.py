@@ -55,8 +55,6 @@ class Muon(torch.optim.Optimizer):
             if p.ndim < 2:
                 raise Exception('Encountered parameter with shape %s in Muon. \
 Muon should only be used with >=2D parameters.' % p.shape)
-            if p.ndim > 2:
-                raise NotImplementedError('Higher than 2D parameters are not yet implemented.')
             if p.size(0) >= 10000:
                 import warnings
                 warnings.warn('Encountered parameter with shape %s in Muon. \
@@ -85,6 +83,8 @@ This may be an embedding; Muon should not be used for the embedding or final lay
                 # luckily this will perfectly distribute a transformer with multiple of 4 layers to 8 GPUs
                 if i % self.world_size == self.rank:
                     g = p.grad
+                    if g.ndim > 2:
+                        g = g.view(g.size(0), -1)
                     assert g is not None
                     state = self.state[p]
                     if 'momentum_buffer' not in state:
