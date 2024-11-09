@@ -24,3 +24,10 @@ optimizer2 = torch.optim.Adam(other_params, lr=3e-4, betas=(0.95, 0.95))
 optimizer1.step()
 optimizer2.step()
 ```
+
+## Accomplishments
+
+* [Lowered the record for training to 94% on CIFAR-10 from 3.3 A100-seconds to 2.7 A100-seconds](https://github.com/KellerJordan/cifar10-airbench)
+* [Improved the trainig speed record for attaining GPT-2 (small) performance by a factor of 1.35x](https://x.com/kellerjordan0/status/1842300916864844014)
+* [Used to attain GPT-2 (XL) performance in $175](https://x.com/kellerjordan0/status/1850995958697308307)
+
