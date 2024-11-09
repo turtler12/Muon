@@ -115,7 +115,7 @@ class Muon(torch.optim.Optimizer):
 
             params = [p for p in group['params'] if p.ndim < 2 or p.size(0) >= 10000]
             lr = group['backup_adamw_lr']
-            betas = group['backup_adamw_betas']
+            beta1, beta2 = group['backup_adamw_betas']
             eps = group['backup_adamw_eps']
             weight_decay = group['backup_adamw_wd']
 
@@ -131,8 +131,8 @@ class Muon(torch.optim.Optimizer):
                 step = state['step']
                 buf1 = state['moment1']
                 buf2 = state['moment2']
-                buf1.lerp_(g, 1-betas[0])
-                buf2.lerp_(g.square(), 1-betas[1])
+                buf1.lerp_(g, 1-beta1)
+                buf2.lerp_(g.square(), 1-beta2)
 
                 g = buf1 / (eps + buf2.sqrt())
 
