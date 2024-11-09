@@ -49,13 +49,29 @@ class Muon(torch.optim.Optimizer):
         nesterov: Whether to use Nesterov-style momentum in the internal SGD. (recommended)
         ns_steps: The number of Newton-Schulz iterations to run.
     """
-    def __init__(self, params, lr=0.02, momentum=0.95, nesterov=True, ns_steps=6,
-                 adamw_lr=3e-4, adamw_betas=(0.95, 0.95),
-                 adamw_eps=1e-8, adamw_wd=0):
+    def __init__(self, muon_params, lr=0.02, momentum=0.95, nesterov=True, ns_steps=6,
+                 adamw_params=None, adamw_lr=3e-4, adamw_betas=(0.95, 0.95), adamw_eps=1e-8, adamw_wd=0):
+
         defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps,
                         adamw_lr_ratio=adamw_lr/lr, adamw_betas=adamw_betas,
                         adamw_eps=adamw_eps, adamw_wd=adamw_wd)
+
+        params = list(muon_params)
+        adamw_params = list(adamw_params) if adamw_params is not None else []
+        params.extend(adamw_params)
         super().__init__(params, defaults)
+
+        # Sort parameters into those for which we will use Muon, and those for which we will not
+        for p in muon_params:
+            # Use Muon for every parameter in muon_params which is >= 2D and doesn't look like an embedding or head layer
+            if p.ndim >= 2 and p.size(0) < 10000:
+                self.state[p]['use_muon'] = True
+            else:
+                self.state[p]['use_muon'] = False
+        for p in adamw_params:
+            # Do not use Muon for parameters in adamw_params
+            self.state[p]['use_muon'] = False
+
         if 'WORLD_SIZE' in os.environ:
             self.world_size = int(os.environ['WORLD_SIZE'])
             self.rank = int(os.environ['RANK'])
@@ -71,7 +87,7 @@ class Muon(torch.optim.Optimizer):
             #           Muon           #
             ############################
 
-            params = [p for p in group['params'] if p.ndim >= 2 and p.size(0) < 10000]
+            params = [p for p in group['params'] if self.state[p]['use_muon']]
             lr = group['lr']
             momentum = group['momentum']
 
@@ -113,7 +129,7 @@ class Muon(torch.optim.Optimizer):
             #       AdamW backup       #
             ############################
 
-            params = [p for p in group['params'] if p.ndim < 2 or p.size(0) >= 10000]
+            params = [p for p in group['params'] if not self.state[p]['use_muon']]
             lr = group['adamw_lr_ratio'] * group['lr'] # in order for lr schedule to work
             beta1, beta2 = group['adamw_betas']
             eps = group['adamw_eps']

@@ -12,9 +12,7 @@ pip install git+https://github.com/KellerJordan/Muon
 
 ## Usage
 
-Warning: If your model has a classification layer with less than 10K outputs (so won't be automatically detected as such), you must use option 2.
-
-### Option 1: Internal AdamW backup
+### Option 1: Implicit AdamW backup
 
 ```python
 from muon import Muon
@@ -23,24 +21,23 @@ optimizer = Muon(model.parameters(), lr=0.02, momentum=0.95,
                  adamw_lr=3e-4, adamw_betas=(0.90, 0.95), adamw_wd=0.01)
 ```
 
-### Option 2: External AdamW backup
+This will automatically optimize all parameters which are <2D or are detected as the embedding / lm_head using Adam.
+
+Suitable for training language models.
+
+### Option 2: Explicit AdamW backup
+
+Use this if your model's classifier head has <10K outputs and therefore can't be automatically detected as such.
+
+Suitable for training vision models or text classifiers.
 
 ```python
-import torch
 from muon import Muon
-
-params = set(model.parameters())
-# Use Adam as fallback for <2D params and the embed/head
-muon_params = set([p for p in ss if p.ndim >= 2 and p.size(0) < 10000])
-other_params = params - muon_params
-optimizer1 = Muon(muon_params, lr=0.02, momentum=0.95)
-optimizer2 = torch.optim.AdamW(other_params, lr=3e-4, betas=(0.95, 0.95))
-
-...
-
-# In training loop
-optimizer1.step()
-optimizer2.step()
+# optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)
+muon_params = [p for p in model.body.parameters() if p.ndim >= 2]
+adamw_params = [p for p in model.body.parameters() if p.ndim < 2] + list(model.head.parameters())
+optimizer = Muon(muon_params, lr=0.02, momentum=0.95,
+                 adamw_params=adaw_params, adamw_lr=3e-4, adamw_betas=(0.90, 0.95), adamw_wd=0.01)
 ```
 
 ### Q: Why do we need the AdamW backup?
