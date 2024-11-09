@@ -27,8 +27,6 @@ Suitable for training language models.
 
 ### Option 2: Explicit AdamW backup
 
-Use this if your model's classifier head has <10K outputs and therefore can't be automatically detected as such.
-
 Suitable for training vision models or text classifiers.
 
 ```python
