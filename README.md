@@ -12,7 +12,7 @@ pip install git+https://github.com/KellerJordan/Muon
 
 ## Usage
 
-Muon is intended for only the internal ≥ 2D parameters of a network. Any embedding, classifier head, or <2D parameters should be optimized using a different backup optimizer (e.g., AdamW).
+Muon is intended for only the internal ≥ 2D parameters of a network. Any embedding, classifier head, or {0, 1}D parameter should be optimized using a different backup optimizer (e.g., AdamW).
 Muon provides two ways to accomplish this.
 
 * Training a language model? Then option 1 will be fine.
