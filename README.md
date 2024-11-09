@@ -1,5 +1,11 @@
-## To use:
+# Muon optimizer
 
+This repo contains an implementation of the `Muon` optimizer described in [this thread](https://x.com/kellerjordan0/status/1842300916864844014).
+It is the best known optimizer for training speed across diverse scenarios including [CIFAR-10](https://github.com/KellerJordan/cifar10-airbench)
+and [GPT-2](https://github.com/KellerJordan/modded-nanogpt) training.
+
+
+## Usage
 
 ```python
 import torch
