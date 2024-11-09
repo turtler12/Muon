@@ -29,6 +29,7 @@ optimizer = Muon(model.parameters(), lr=0.02, momentum=0.95,
 ```
 
 This will automatically optimize all parameters which are <2D or are detected as the embedding / lm_head using Adam.
+The latter are detected by checking whether their first dim is greater than 10,000.
 
 
 ### Option 2: Explicit AdamW backup
