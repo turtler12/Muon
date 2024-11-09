@@ -12,6 +12,8 @@ pip install git+https://github.com/KellerJordan/Muon
 
 ## Usage
 
+Warning: If your model has a classification layer with less than 10K outputs (so won't be automatically detected as such), you must use option 2.
+
 ### Option 1: Internal AdamW backup
 
 ```python
