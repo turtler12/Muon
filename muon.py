@@ -139,6 +139,6 @@ class Muon(torch.optim.Optimizer):
                 bias_correction1 = 1 - beta1**step
                 bias_correction2 = 1 - beta2**step
                 scale = bias_correction1 / bias_correction2**0.5
-                param.mul_(1 - lr * weight_decay)
+                p.data.mul_(1 - lr * weight_decay)
                 p.data.add_(g, alpha=-lr/scale)
 
