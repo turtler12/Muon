@@ -39,11 +39,12 @@ from muon import Muon
 muon_params = [p for p in model.body.parameters() if p.ndim >= 2]
 adamw_params = [p for p in model.body.parameters() if p.ndim < 2]
 adamw_params.extend(model.head.parameters())
+adamw_params.extend(model.embed.parameters())
 optimizer = Muon(muon_params, lr=0.02, momentum=0.95,
                  adamw_params=adaw_params, adamw_lr=3e-4, adamw_betas=(0.90, 0.95), adamw_wd=0.01)
 ```
 
-You'll have to replace `model.body` and `model.head` with whatever's appropriate for your model.
+You'll have to replace `model.body`, `model.head`, and `model.embed` with whatever subset is appropriate for your model.
 
 ## Benchmarks
 
