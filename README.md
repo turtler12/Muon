@@ -28,6 +28,6 @@ optimizer2.step()
 ## Accomplishments
 
 * [Lowered the record for training to 94% on CIFAR-10 from 3.3 A100-seconds to 2.7 A100-seconds](https://github.com/KellerJordan/cifar10-airbench)
+* [Used to train a transformer to GPT-2 (XL) performance in $175 of compute](https://x.com/kellerjordan0/status/1850995958697308307)
 * [Improved the trainig speed record for attaining GPT-2 (small) performance by a factor of 1.35x](https://x.com/kellerjordan0/status/1842300916864844014)
-* [Used to attain GPT-2 (XL) performance in $175](https://x.com/kellerjordan0/status/1850995958697308307)
 
