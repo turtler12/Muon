@@ -53,8 +53,8 @@ For a comparison between AdamW, Shampoo, SOAP, and Muon for training a 124M-para
 
 ## Hyperparameter tuning
 
-If you're replacing an already-tuned AdamW with Muon, the only thing you should need to tune is Muon's learning rate.
-In particular, the momentum 0.95 should be generally close to optimal.
+If you're replacing an already-tuned AdamW with Muon, *the only thing you should need to tune is Muon's learning rate.*
+In particular, the momentum 0.95 should be generally close to optimal. The AdamW parameters should be set to whatever you were already using.
 
 The biggest gains over AdamW should be expected when training with a large batch size.
 
