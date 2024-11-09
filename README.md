@@ -48,6 +48,9 @@ Therefore, you need to use a backup optimizer for those other parameters. This i
 be used for <2D parameters and for the embedding and classification head of a transformer (detected by assuming these have first dim >= 10000).
 Alternately, you can explicitly filter the parameters and use an external backup (a separate optimizer).
 
+## More info
+
+See [this thread](https://x.com/kellerjordan0/status/1844782418676339059)
 
 ## Accomplishments
 
