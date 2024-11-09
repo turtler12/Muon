@@ -9,7 +9,8 @@ setup(
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/KellerJordan/Muon',
-    packages=find_packages(),
+    #packages=find_packages(),
+    py_modules=['muon'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
