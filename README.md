@@ -1,8 +1,8 @@
 # Muon optimizer
 
 This repo contains an implementation of the `Muon` optimizer described in [this thread](https://x.com/kellerjordan0/status/1842300916864844014).
-Muon is the fastest known optimizer across diverse scenarios including [CIFAR-10](https://github.com/KellerJordan/cifar10-airbench)
-and [GPT-2](https://github.com/KellerJordan/modded-nanogpt) training.
+Muon is the fastest known optimizer for speedrunning both [94% accuracy on CIFAR-10](https://github.com/KellerJordan/cifar10-airbench)
+as well as [GPT-2 small](https://github.com/KellerJordan/modded-nanogpt).
 
 ## Installation
 
