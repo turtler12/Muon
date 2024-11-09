@@ -49,17 +49,13 @@ class Muon(torch.optim.Optimizer):
         nesterov: Whether to use Nesterov-style momentum in the internal SGD. (recommended)
         ns_steps: The number of Newton-Schulz iterations to run.
     """
-    def __init__(self, params, lr=0.02, momentum=0.95, nesterov=True, ns_steps=6):
+    def __init__(self, params, lr=0.02, momentum=0.95, nesterov=True, ns_steps=6,
+                 backup_adam_lr=3e-4, backup_adam_betas=(0.95, 0.95),
+                 backup_adam_eps=1e-8, backup_adam_wd=0):
         assert all([p.ndim >= 2 for p in params])
-        for p in params:
-            if p.ndim < 2:
-                raise Exception('Encountered parameter with shape %s in Muon. \
-Muon should only be used with >=2D parameters.' % p.shape)
-            if p.size(0) >= 10000:
-                import warnings
-                warnings.warn('Encountered parameter with shape %s in Muon. \
-This may be an embedding; Muon should not be used for the embedding or final layer.' % p.shape)
-        defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps)
+        defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps,
+                        backup_adam_lr=backup_adam_lr, backup_adam_betas=backup_adam_betas,
+                        backup_adam_eps=backup_adam_eps, backup_adam_wd=0)
         super().__init__(params, defaults)
         if 'WORLD_SIZE' in os.environ:
             self.world_size = int(os.environ['WORLD_SIZE'])
@@ -72,14 +68,19 @@ This may be an embedding; Muon should not be used for the embedding or final lay
 
         for group in self.param_groups:
 
+            ############################
+            #           Muon           #
+            ############################
+
+            params = [p for p in group['params'] if p.ndim >= 2 and p.size(0) < 10000]
             lr = group['lr']
             momentum = group['momentum']
 
             # generate weight updates in distributed fashion
-            total_params = sum(p.numel() for p in group['params'])
+            total_params = sum(p.numel() for p in params)
             updates_flat = torch.zeros(total_params, device='cuda', dtype=torch.bfloat16)
             curr_idx = 0
-            for i, p in enumerate(group['params']):
+            for i, p in enumerate(params):
                 # luckily this will perfectly distribute a transformer with multiple of 4 layers to 8 GPUs
                 if i % self.world_size == self.rank:
                     g = p.grad
@@ -104,8 +105,41 @@ This may be an embedding; Muon should not be used for the embedding or final lay
 
             # deserialize and apply updates
             curr_idx = 0
-            for p in group['params']:
+            for p in params:
                 g = updates_flat[curr_idx:curr_idx+p.numel()].view_as(p.data).type_as(p.data)
                 p.data.add_(g, alpha=-lr)
                 curr_idx += p.numel()
+
+            ############################
+            #       AdamW backup       #
+            ############################
+
+            params = [p for p in group['params'] if p.ndim < 2 or p.size(0) >= 10000]
+            lr = group['backup_adam_lr']
+            betas = group['backup_adam_betas']
+            eps = group['backup_adam_eps']
+            weight_decay = group['backup_adam_wd']
+
+            for p in params:
+                g = p.grad
+                assert g is not None
+                state = self.state[p]
+                if 'step' not in state:
+                    state['step'] = 0
+                    state['moment1'] = torch.zeros_like(g)
+                    state['moment2'] = torch.zeros_like(g)
+                state['step'] += 1
+                step = state['step']
+                buf1 = state['moment1']
+                buf2 = state['moment2']
+                buf1.lerp_(g, 1-betas[0])
+                buf2.lerp_(g.square(), 1-betas[1])
+
+                g = buf1 / (eps + buf2.sqrt())
+
+                bias_correction1 = 1 - beta1**step
+                bias_correction2 = 1 - beta2**step
+                scale = bias_correction1 / bias_correction2.sqrt()
+                param.mul_(1 - lr * weight_decay)
+                p.data.add_(g, alpha=-lr/scale)
 
