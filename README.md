@@ -7,6 +7,11 @@ and [GPT-2](https://github.com/KellerJordan/modded-nanogpt) training.
 
 ## Usage
 
+Muon is only meant for optimizing >= 2D parameters, and it's not recommended for the embedding or classification head layers (this is similar to Shampoo and SOAP).
+Therefore, we need to use a backup optimizer for those parameters. This implementation of Muon supports an internal AdamW backup, which will automatically
+be used <2D parameters and for the embedding and head of a transformer (detected by assuming these have first dim >= 10000).
+Alternately, you can explicitly filter the parameters to be optimized by the backup.
+
 ### Option 1: Internal AdamW backup
 
 ```python
