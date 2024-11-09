@@ -54,7 +54,7 @@ class Muon(torch.optim.Optimizer):
                  backup_adamw_eps=1e-8, backup_adamw_wd=0):
         defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps,
                         backup_adamw_lr_ratio=backup_adamw_lr/lr, backup_adamw_betas=backup_adamw_betas,
-                        backup_adamw_eps=backup_adamw_eps, backup_adamw_wd=0)
+                        backup_adamw_eps=backup_adamw_eps, backup_adamw_wd=backup_adamw_wd)
         super().__init__(params, defaults)
         if 'WORLD_SIZE' in os.environ:
             self.world_size = int(os.environ['WORLD_SIZE'])
