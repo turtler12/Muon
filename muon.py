@@ -1,9 +1,6 @@
 import torch
 import torch.distributed as dist
 
-# -----------------------------------------------------------------------------
-# Muon optimizer
-
 @torch.compile
 def zeropower_via_newtonschulz5(G, steps=10, eps=1e-7):
     """
@@ -42,17 +39,14 @@ class Muon(torch.optim.Optimizer):
     - This optimizer assumes that all parameters passed in are 2D.
     - It should not be used for the embedding layer, the final fully connected layer, or any {0,1}-D
     parameters; those should all be optimized by a standard method (e.g., AdamW).
-    - To use it with 4D convolutional filters, it works well to just flatten their last 3 dimensions.
     - We believe it is unlikely to work well for training with small batch size.
     - We believe it may not work well for finetuning pretrained models, but we haven't tested this.
-    - We have not yet tried this optimizer for training scenarios larger than NanoGPT (124M).
 
     Arguments:
-        lr: The learning rate used by the internal SGD.
+        lr: The learning rate. The updates will have spectral norm of `lr`, 0.02 is a good default.
         momentum: The momentum used by the internal SGD.
         nesterov: Whether to use Nesterov-style momentum in the internal SGD. (recommended)
-        backend: The chosen backend for the orthogonalization step. (recommended: 'newtonschulz5')
-        backend_steps: The number of iteration steps to use in the backend, if it is iterative.
+        ns_steps: The number of Newton-Schulz iterations to run.
     """
     def __init__(self, params, lr=0.02, momentum=0.95, nesterov=True, ns_steps=6):
         assert all([p.ndim >= 2 for p in params])
