@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.distributed as dist
 
@@ -62,6 +63,12 @@ Muon should only be used with >=2D parameters.' % p.shape)
 This may be an embedding; Muon should not be used for the embedding or final layer.' % p.shape)
         defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps)
         super().__init__(params, defaults)
+        if 'WORLD_SIZE' in os.environ:
+            self.world_size = int(os.environ['WORLD_SIZE'])
+            self.rank = int(os.environ['RANK'])
+        else:
+            self.world_size = 1
+            self.rank = 0
 
     def step(self):
 
@@ -76,7 +83,7 @@ This may be an embedding; Muon should not be used for the embedding or final lay
             curr_idx = 0
             for i, p in enumerate(group['params']):
                 # luckily this will perfectly distribute a transformer with multiple of 4 layers to 8 GPUs
-                if i % int(os.environ['WORLD_SIZE']) == int(os.environ['RANK']):
+                if i % self.world_size == self.rank:
                     g = p.grad
                     assert g is not None
                     state = self.state[p]
@@ -92,7 +99,8 @@ This may be an embedding; Muon should not be used for the embedding or final lay
                 curr_idx += p.numel()
 
             # sync updates across devices. we are not memory-constrained so can do this simple deserialization
-            dist.all_reduce(updates_flat, op=dist.ReduceOp.SUM)
+            if self.world_size > 1:
+                dist.all_reduce(updates_flat, op=dist.ReduceOp.SUM)
 
             # deserialize and apply updates
             curr_idx = 0
