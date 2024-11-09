@@ -4,6 +4,11 @@ This repo contains an implementation of the `Muon` optimizer described in [this 
 Muon is the fastest known optimizer across diverse scenarios including [CIFAR-10](https://github.com/KellerJordan/cifar10-airbench)
 and [GPT-2](https://github.com/KellerJordan/modded-nanogpt) training.
 
+## Installation
+
+```
+pip install git+https://github.com/KellerJordan/Muon
+```
 
 ## Usage
 
