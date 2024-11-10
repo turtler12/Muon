@@ -35,7 +35,6 @@ You'll have to replace `model.body`, `model.head`, and `model.embed` with whatev
 ## Hyperparameters
 
 If you're replacing an already-tuned AdamW with Muon, the only thing you should need to tune is Muon's learning rate.
-
 The AdamW hyperparameters should be set to whatever you were already using.
 
 ## Benchmarks
