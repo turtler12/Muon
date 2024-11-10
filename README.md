@@ -32,15 +32,15 @@ optimizer = Muon(muon_params, lr=0.02, momentum=0.95,
 
 You'll have to replace `model.body`, `model.head`, and `model.embed` with whatever subset is appropriate for your model.
 
-## Benchmarks
-
-For a comparison between AdamW, Shampoo, SOAP, and Muon for training a 124M-parameter transformer, see [here](https://github.com/KellerJordan/modded-nanogpt/tree/master/records/102924_Optimizers).
-
-## Hyperparameter tuning
+## Hyperparameters
 
 If you're replacing an already-tuned AdamW with Muon, the only thing you should need to tune is Muon's learning rate.
 
 The AdamW hyperparameters should be set to whatever you were already using.
+
+## Benchmarks
+
+For a comparison between AdamW, Shampoo, SOAP, and Muon for training a 124M-parameter transformer, see [here](https://github.com/KellerJordan/modded-nanogpt/tree/master/records/102924_Optimizers).
 
 ## Connection to Shampoo
 
