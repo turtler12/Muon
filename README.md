@@ -16,9 +16,9 @@ Muon is intended for only the internal ≥2D parameters of a network. Any embedd
 Muon provides an internal AdamW backup so you don't have to use an extra optimizer.
 
 ```python
-from muon import Muon
 # optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)
 
+from muon import Muon
 # Find ≥2D parameters in the body of the network -- these will be optimized by Muon
 muon_params = [p for p in model.body.parameters() if p.ndim >= 2]
 # Find everything else -- these will be optimized by AdamW
