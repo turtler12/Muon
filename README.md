@@ -12,35 +12,20 @@ pip install git+https://github.com/KellerJordan/Muon
 
 ## Usage
 
-Muon is intended for only the internal ≥ 2D parameters of a network. Any embedding, classifier head, or {0, 1}D parameter should be optimized using a backup optimizer instead (e.g., AdamW).
-Muon provides two ways to accomplish this.
-
-* Training a language model? Then option 1 will be fine.
-* Training anything else? Use option 2 so that Muon explicitly knows about your classifier head.
-
-
-### Option 1: Implicit AdamW backup
+Muon is intended for only the internal ≥2D parameters of a network. Any embedding, classifier head, or {0, 1}D parameter should be optimized using a backup optimizer instead (e.g., AdamW).
+Muon provides an internal AdamW backup so you don't have to use an extra optimizer.
 
 ```python
 from muon import Muon
 # optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)
-optimizer = Muon(model.parameters(), lr=0.02, momentum=0.95,
-                 adamw_lr=3e-4, adamw_betas=(0.90, 0.95), adamw_wd=0.01)
-```
 
-This will automatically optimize all parameters which are <2D or are detected as the embedding / lm_head using Adam.
-The latter are detected by checking whether their first dim is greater than 10,000.
-
-
-### Option 2: Explicit AdamW backup
-
-```python
-from muon import Muon
-# optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)
+# Find ≥2D parameters in the body of the network -- these will be optimized by Muon
 muon_params = [p for p in model.body.parameters() if p.ndim >= 2]
+# Find everything else -- these will be optimized by AdamW
 adamw_params = [p for p in model.body.parameters() if p.ndim < 2]
 adamw_params.extend(model.head.parameters())
 adamw_params.extend(model.embed.parameters())
+# Create the optimizer
 optimizer = Muon(muon_params, lr=0.02, momentum=0.95,
                  adamw_params=adaw_params, adamw_lr=3e-4, adamw_betas=(0.90, 0.95), adamw_wd=0.01)
 ```
