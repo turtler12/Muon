@@ -21,8 +21,8 @@ def zeropower_via_newtonschulz5(G, steps=10, eps=1e-7):
         X = X.T
     for _ in range(steps):
         A = X @ X.T
-        B = A @ X
-        X = a * X + b * B + c * A @ B
+        B = b * A + c * A @ A
+        X = a * X + B @ X
     if G.size(0) > G.size(1):
         X = X.T
     return X
