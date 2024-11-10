@@ -12,9 +12,11 @@ pip install git+https://github.com/KellerJordan/Muon
 
 ## Usage
 
-Training a language model? Then option 1 will be fine.
+Muon is intended for only the internal ≥ 2D parameters of a network. Any embedding, classifier head, or {0, 1}D parameter should be optimized using a backup optimizer instead (e.g., AdamW).
+Muon provides two ways to accomplish this.
 
-Training anything else? Use option 2 so that Muon explicitly knows about your classifier head.
+* Training a language model? Then option 1 will be fine.
+* Training anything else? Use option 2 so that Muon explicitly knows about your classifier head.
 
 
 ### Option 1: Implicit AdamW backup
@@ -27,6 +29,7 @@ optimizer = Muon(model.parameters(), lr=0.02, momentum=0.95,
 ```
 
 This will automatically optimize all parameters which are <2D or are detected as the embedding / lm_head using Adam.
+The latter are detected by checking whether their first dim is greater than 10,000.
 
 
 ### Option 2: Explicit AdamW backup
@@ -37,25 +40,27 @@ from muon import Muon
 muon_params = [p for p in model.body.parameters() if p.ndim >= 2]
 adamw_params = [p for p in model.body.parameters() if p.ndim < 2]
 adamw_params.extend(model.head.parameters())
+adamw_params.extend(model.embed.parameters())
 optimizer = Muon(muon_params, lr=0.02, momentum=0.95,
                  adamw_params=adaw_params, adamw_lr=3e-4, adamw_betas=(0.90, 0.95), adamw_wd=0.01)
 ```
 
-You'll have to replace `model.body` and `model.head` with whatever's appropriate for your model.
-
-### Q: Why do we need the AdamW backup?
-Answer: Muon is only meant for optimizing >= 2D parameters, and it's not recommended for the embedding or classification head layers (this is similar to Shampoo and SOAP).
-Therefore, you need to use a backup optimizer for those other parameters. This implementation of Muon supports an internal AdamW backup, which will automatically
-be used for <2D parameters and for the embedding and classification head of a transformer (detected by assuming these have first dim >= 10000).
-Alternately, you can explicitly filter the parameters and use an external backup (a separate optimizer).
+You'll have to replace `model.body`, `model.head`, and `model.embed` with whatever subset is appropriate for your model.
 
 ## Benchmarks
 
 For a comparison between AdamW, Shampoo, SOAP, and Muon for training a 124M-parameter transformer, see [here](https://github.com/KellerJordan/modded-nanogpt/tree/master/records/102924_Optimizers).
 
+## Hyperparameter tuning
+
+If you're replacing an already-tuned AdamW with Muon, the only thing you should need to tune is Muon's learning rate.
+In particular, the momentum 0.95 should be generally close to optimal. The AdamW parameters should be set to whatever you were already using.
+
+The biggest gains over AdamW should be expected when training with a large batch size.
+
 ## Connection to Shampoo
 
-See [this thread](https://x.com/kellerjordan0/status/1844782418676339059) for more info including the connection to Shampoo
+See [this thread](https://x.com/kellerjordan0/status/1844782418676339059) for more info including the connection to Shampoo.
 
 ## Accomplishments
 
