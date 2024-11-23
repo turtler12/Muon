@@ -83,7 +83,7 @@ class Muon(torch.optim.Optimizer):
             self.world_size = 1
             self.rank = 0
 
-    def step(self):
+    def step(self, closure=None):
         """Perform a single optimization step.
 
         Args:
