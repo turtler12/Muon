@@ -83,7 +83,17 @@ class Muon(torch.optim.Optimizer):
             self.world_size = 1
             self.rank = 0
 
-    def step(self):
+    def step(self, closure=None):
+        """Perform a single optimization step.
+
+        Args:
+            closure (Callable, optional): A closure that reevaluates the model
+                and returns the loss.
+        """
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
 
         for group in self.param_groups:
 
