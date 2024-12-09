@@ -50,3 +50,15 @@ See [this thread](https://x.com/kellerjordan0/status/1844782418676339059) for mo
 * [Used to train a transformer to GPT-2 (XL) performance in $175 of compute](https://x.com/kellerjordan0/status/1850995958697308307)
 * [Improved the training speed record for attaining GPT-2 (small) performance by a factor of 1.35x](https://x.com/kellerjordan0/status/1842300916864844014)
 
+## Citation
+
+```
+@misc{jordan2024muon,
+  author       = {Keller Jordan and Yuchen Jin and Vlado Boza and You Jiacheng and
+                  Franz Cecista and Laker Newhouse and Jeremy Bernstein},
+  title        = {Muon: An optimizer for hidden layers in neural networks},
+  year         = {2024},
+  url          = {https://kellerjordan.github.io/posts/muon/}
+}
+```
+
