@@ -3,26 +3,39 @@ import torch
 import torch.distributed as dist
 
 @torch.compile
-def zeropower_via_newtonschulz5(G, steps=10, eps=1e-7):
+def zeropower_via_newtonschulz5(G, steps):
     """
     Newton-Schulz iteration to compute the zeroth power / orthogonalization of G. We opt to use a
     quintic iteration whose coefficients are selected to maximize the slope at zero. For the purpose
     of minimizing steps, it turns out to be empirically effective to keep increasing the slope at
     zero even beyond the point where the iteration no longer converges all the way to one everywhere
     on the interval. This iteration therefore does not produce UV^T but rather something like US'V^T
-    where S' is diagonal with S_{ii}' \sim Uniform(0.5, 1.5), which turns out not to hurt model
+    where S' is diagonal with S_{ii}' ~ Uniform(0.5, 1.5), which turns out not to hurt model
     performance at all relative to UV^T, where USV^T = G is the SVD.
     """
     assert len(G.shape) == 2
     a, b, c = (3.4445, -4.7750,  2.0315)
     X = G.bfloat16()
-    X /= (X.norm() + eps) # ensure top singular value <= 1
     if G.size(0) > G.size(1):
         X = X.T
-    for _ in range(steps):
+
+    # Use the Frobenius norm of (X @ X.T)^2 computed during first NS iteration to ensure spectral norm
+    # is below 1, as suggested by Johan Sokrates Wind @johanwind
+    # https://github.com/KellerJordan/modded-nanogpt/discussions/23#discussioncomment-11293594
+    A = X @ X.T
+    A2 = A @ A
+    A2_norm = A2.norm() + 1e-28
+    X /= A2_norm**0.25 # ensure top singular value <= 1
+    A /= A2_norm**0.5
+    A2 /= A2_norm
+    X = a * X + (b * A + c * A2) @ X
+
+    # Perform the remaining NS iterations
+    for _ in range(steps-1):
         A = X @ X.T
-        B = b * A + c * A @ A
+        B = b * A + c * A @ A # adapted from suggestion by @jxbz, @leloykun, and @YouJiacheng
         X = a * X + B @ X
+
     if G.size(0) > G.size(1):
         X = X.T
     return X
@@ -53,7 +66,7 @@ class Muon(torch.optim.Optimizer):
         adamw_eps: The epsilon for the internal AdamW.
         adamw_wd: The weight decay for the internal AdamW.
     """
-    def __init__(self, muon_params, lr=0.02, momentum=0.95, nesterov=True, ns_steps=6,
+    def __init__(self, muon_params, lr=0.02, momentum=0.95, nesterov=True, ns_steps=5,
                  adamw_params=None, adamw_lr=3e-4, adamw_betas=(0.95, 0.95), adamw_eps=1e-8, adamw_wd=0):
 
         defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps,
