@@ -96,7 +96,17 @@ class Muon(torch.optim.Optimizer):
             self.world_size = 1
             self.rank = 0
 
-    def step(self):
+    def step(self, closure=None):
+        """Perform a single optimization step.
+
+        Args:
+            closure (Callable, optional): A closure that reevaluates the model
+                and returns the loss.
+        """
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
 
         for group in self.param_groups:
 
@@ -116,6 +126,8 @@ class Muon(torch.optim.Optimizer):
                 # luckily this will perfectly distribute a transformer with multiple of 4 layers to 8 GPUs
                 if i % self.world_size == self.rank:
                     g = p.grad
+                    if g is None:
+                        continue
                     if g.ndim > 2:
                         g = g.view(g.size(0), -1)
                     assert g is not None
@@ -126,6 +138,8 @@ class Muon(torch.optim.Optimizer):
                     buf.mul_(momentum).add_(g)
                     if group['nesterov']:
                         g = g.add(buf, alpha=momentum)
+                    else:
+                        g = buf
                     g = zeropower_via_newtonschulz5(g, steps=group['ns_steps'])
                     g *= max(1, g.size(0)/g.size(1))**0.5
                     updates_flat[curr_idx:curr_idx+p.numel()] = g.flatten()
@@ -154,7 +168,8 @@ class Muon(torch.optim.Optimizer):
 
             for p in params:
                 g = p.grad
-                assert g is not None
+                if g is None:
+                    continue
                 state = self.state[p]
                 if 'step' not in state:
                     state['step'] = 0
@@ -175,3 +190,4 @@ class Muon(torch.optim.Optimizer):
                 p.data.mul_(1 - lr * weight_decay)
                 p.data.add_(g, alpha=-lr/scale)
 
+        return loss
