@@ -19,23 +19,14 @@ def zeropower_via_newtonschulz5(G, steps):
     if G.size(0) > G.size(1):
         X = X.T
 
-    # Use the Frobenius norm of (X @ X.T)^2 computed during first NS iteration to ensure spectral norm
-    # is below 1, as suggested by Johan Sokrates Wind @johanwind
-    # https://github.com/KellerJordan/modded-nanogpt/discussions/23#discussioncomment-11293594
-    A = X @ X.T
-    A2 = A @ A
-    A2_norm = A2.norm() + 1e-28
-    X /= A2_norm**0.25 # ensure top singular value <= 1
-    A /= A2_norm**0.5
-    A2 /= A2_norm
-    X = a * X + (b * A + c * A2) @ X
-
-    # Perform the remaining NS iterations
-    for _ in range(steps-1):
+    # Ensure spectral norm is at most 1
+    X = X / (X.norm() + 1e-7)
+    # Perform the NS iterations
+    for _ in range(steps):
         A = X @ X.T
         B = b * A + c * A @ A # adapted from suggestion by @jxbz, @leloykun, and @YouJiacheng
         X = a * X + B @ X
-
+    
     if G.size(0) > G.size(1):
         X = X.T
     return X
@@ -66,7 +57,7 @@ class Muon(torch.optim.Optimizer):
         adamw_eps: The epsilon for the internal AdamW.
         adamw_wd: The weight decay for the internal AdamW.
     """
-    def __init__(self, muon_params, lr=0.02, momentum=0.95, nesterov=True, ns_steps=5,
+    def __init__(self, muon_params, lr=0.02, momentum=0.95, nesterov=True, ns_steps=6,
                  adamw_params=None, adamw_lr=3e-4, adamw_betas=(0.95, 0.95), adamw_eps=1e-8, adamw_wd=0):
 
         defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps,
