@@ -50,10 +50,6 @@ It should have constant muP scaling, that is, as you scale up the model size, yo
 
 For a comparison between AdamW, Shampoo, SOAP, and Muon for training a 124M-parameter transformer, see [here](https://github.com/KellerJordan/modded-nanogpt/tree/master/records/102924_Optimizers).
 
-## Connection to Shampoo
-
-See [this thread](https://x.com/kellerjordan0/status/1844782418676339059) for more info including the connection to Shampoo.
-
 ## Accomplishments
 
 * [Lowered the record for training to 94% on CIFAR-10 from 3.3 A100-seconds to 2.7 A100-seconds](https://github.com/KellerJordan/cifar10-airbench)
