@@ -20,7 +20,7 @@ from muon import Muon
 # Find ≥2D parameters in the body of the network -- these will be optimized by Muon
 muon_params = [p for p in model.body.parameters() if p.ndim >= 2]
 # Find everything else -- these will be optimized by AdamW
-adamw_params = [p for p in model.body.parameters() if p.ndim < 2] + list(model.head.parameters()) + list(model.embed.parameters())
+adamw_params = [p for p in model.body.parameters() if p.ndim < 2] + [*model.head.parameters(), *model.embed.parameters()]
 # Create the optimizer
 optimizers = [Muon(muon_params, lr=0.02, momentum=0.95),
               torch.optim.AdamW(adamw_params, lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)]
