@@ -17,9 +17,9 @@ Embeddings, classifier heads, and scalar or vector parameters should be optimize
 # optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)
 
 from muon import Muon
-# Find ≥2D parameters in the body of the network -- these will be optimized by Muon
+# Find ≥2D parameters in the body of the network -- these should be optimized by Muon
 muon_params = [p for p in model.body.parameters() if p.ndim >= 2]
-# Find everything else -- these will be optimized by AdamW
+# Find everything else -- these should be optimized by AdamW
 adamw_params = ([p for p in model.body.parameters() if p.ndim < 2]
               + [*model.head.parameters(), *model.embed.parameters()])
 # Create the optimizer
