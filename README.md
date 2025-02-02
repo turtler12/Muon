@@ -1,4 +1,4 @@
-# Muon: An optimizer for hidden layers in neural networks
+# Muon: An optimizer for the hidden layers of neural networks
 
 This repo contains an implementation of the `Muon` optimizer described in [this thread](https://x.com/kellerjordan0/status/1842300916864844014) and [this writeup](https://kellerjordan.github.io/posts/muon/).
 
