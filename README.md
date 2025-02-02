@@ -34,6 +34,12 @@ for opt in optimizers:
 You'll have to replace `model.body`, `model.head`, and `model.embed` with whatever subset is appropriate for your model.
 E.g., for a ConvNet, `muon_params` should be all the convolutional filters, and `adamw_params` should be everything else.
 
+## Example usage
+
+[Usage of this Muon in the NanoGPT speedrun](https://github.com/KellerJordan/modded-nanogpt/blob/d700b8724cbda3e7b1e5bcadbc0957f6ad1738fd/train_gpt.py#L519)
+
+[Usage of a Muon variant in the CIFAR-10 speedrun](https://github.com/KellerJordan/cifar10-airbench/blob/0e6f9614572d7e8e3c259905aebc7196f91d5d79/research/clean_muon.py#L220)
+
 ## Hyperparameter tuning
 
 If you're replacing an already-tuned AdamW with Muon, the only thing you should need to tune is Muon's learning rate.
