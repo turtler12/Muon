@@ -43,6 +43,7 @@ E.g., for a ConvNet, `muon_params` should be all the convolutional filters, and 
 ## Hyperparameter tuning
 
 Typically, the default values of momentum (0.95), nesterov (True), and ns_steps (5) work well. The only hyperparameter which must be tuned is the learning rate.
+It should have constant muP scaling, that is, as you scale up the model size, you shouldn't need to retune the learning rate.
 
 ## Benchmarks
 
