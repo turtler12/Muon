@@ -20,12 +20,15 @@ from muon import Muon
 # Find ≥2D parameters in the body of the network -- these will be optimized by Muon
 muon_params = [p for p in model.body.parameters() if p.ndim >= 2]
 # Find everything else -- these will be optimized by AdamW
-adamw_params = [p for p in model.body.parameters() if p.ndim < 2]
-adamw_params.extend(model.head.parameters())
-adamw_params.extend(model.embed.parameters())
+adamw_params = [p for p in model.body.parameters() if p.ndim < 2] + list(model.head.parameters()) + list(model.embed.parameters())
 # Create the optimizer
-optimizer = Muon(muon_params, lr=0.02, momentum=0.95,
-                 adamw_params=adamw_params, adamw_lr=3e-4, adamw_betas=(0.90, 0.95), adamw_wd=0.01)
+optimizers = [Muon(muon_params, lr=0.02, momentum=0.95),
+              torch.optim.AdamW(adamw_params, lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)]
+...
+
+# in the training step
+for opt in optimizers:
+    opt.step()
 ```
 
 You'll have to replace `model.body`, `model.head`, and `model.embed` with whatever subset is appropriate for your model.
