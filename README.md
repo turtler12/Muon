@@ -42,8 +42,7 @@ E.g., for a ConvNet, `muon_params` should be all the convolutional filters, and 
 
 ## Hyperparameter tuning
 
-If you're replacing an already-tuned AdamW with Muon, the only thing you should need to tune is Muon's learning rate.
-The AdamW hyperparameters should be set to whatever you were already using.
+Typically, the default values of momentum (0.95), nesterov (True), and ns_steps (5) work well. The only hyperparameter which must be tuned is the learning rate.
 
 ## Benchmarks
 
