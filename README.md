@@ -10,7 +10,8 @@ pip install git+https://github.com/KellerJordan/Muon
 
 ## Usage
 
-Muon is intended to optimize only the internal ≥2D parameters of a network. Embeddings, classifier heads, and scalar or vector parameters should be optimized using AdamW instead.
+Muon is intended to optimize only the internal ≥2D parameters of a network.
+Embeddings, classifier heads, and scalar or vector parameters should be optimized using AdamW.
 
 ```python
 # optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)
