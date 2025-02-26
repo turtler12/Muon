@@ -1,6 +1,7 @@
 import os
 import torch
 import torch.distributed as dist
+from torch import Tensor
 
 def zeropower_via_newtonschulz5(G: Tensor, steps: int) -> Tensor:
     """
