@@ -39,7 +39,7 @@ E.g., for a ConvNet, `muon_params` should be all the convolutional filters, and 
 
 [Example use in the NanoGPT speedrun](https://github.com/KellerJordan/modded-nanogpt/blob/d700b8724cbda3e7b1e5bcadbc0957f6ad1738fd/train_gpt.py#L519)
 
-[Example use in the CIFAR-10 speedrun](https://github.com/KellerJordan/cifar10-airbench/blob/562161aa61061e3e40f9a156b93ff9c234df421f/airbench94_muon.py#L366)
+[Example use in the CIFAR-10 speedrun](https://github.com/KellerJordan/cifar10-airbench/blob/28bff5f5b31e95aa45b5b20e1f48baf1ed98d5f6/airbench94_muon.py#L362)
 
 ## Hyperparameter tuning
 
