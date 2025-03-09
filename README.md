@@ -2,7 +2,7 @@
 
 This repo contains an implementation of the `Muon` optimizer described in [this thread](https://x.com/kellerjordan0/status/1842300916864844014) and [this writeup](https://kellerjordan.github.io/posts/muon/).
 
-For more info, see the [blog post by Jialin Su (the creator of RoPE)](https://kexue.fm/archives/10592) or the [tech report by Kimi.ai on using Muon for scaled training](https://arxiv.org/abs/2502.16982v1)
+For more helpful info, see the [blog post on Muon by Jialin Su (the creator of RoPE)](https://kexue.fm/archives/10592) or the [tech report by Kimi.ai on using Muon for scaled training](https://arxiv.org/abs/2502.16982v1)
 
 ## Installation
 
