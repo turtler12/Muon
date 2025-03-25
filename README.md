@@ -23,7 +23,7 @@ muon_params = [p for p in model.body.parameters() if p.ndim >= 2]
 adamw_params = ([p for p in model.body.parameters() if p.ndim < 2]
               + [*model.head.parameters(), *model.embed.parameters()])
 # Create the optimizer
-optimizers = [Muon(muon_params, lr=0.02, momentum=0.95),
+optimizers = [Muon(muon_params, lr=0.02, momentum=0.95, rank=0, world_size=1),
               torch.optim.AdamW(adamw_params, lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)]
 ...
 
