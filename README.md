@@ -11,29 +11,75 @@ pip install git+https://github.com/KellerJordan/Muon
 ## Usage
 
 Muon is intended to optimize only the internal ≥2D parameters of a network.
-Embeddings, classifier heads, and scalar or vector parameters should be optimized using AdamW.
+Embeddings, classifier heads, and scalar or vector parameters should use AdamW.
+
+### Default (auto-classify params into Muon and AdamW)
 
 ```python
 # optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)
 
 from muon import Muon
+optimizer = Muon(model.parameters(), model=model, lr=0.02, momentum=0.95, weight_decay=0.01,
+                 adamw_lr=3e-4, adamw_betas=(0.90, 0.95), adamw_wd=0.01, rank=0, world_size=1)
+
+# in the training step
+optimizer.step()
+```
+
+Linear and Conv parameters will automatically be optimized by Muon, while embedding, bias, and other parameters will
+use an internal AdamW. You have to pass the model itself to make auto-classification possible. Passing the model to an
+optimizer isn't standard PyTorch philosophy, but Muon is an [architecture-aware optimizer](https://arxiv.org/abs/2410.21265).
+
+### Or choose explicit parameters for Muon and AdamW
+
+```python
 # Find ≥2D parameters in the body of the network -- these should be optimized by Muon
 muon_params = [p for p in model.body.parameters() if p.ndim >= 2]
 # Find everything else -- these should be optimized by AdamW
 adamw_params = ([p for p in model.body.parameters() if p.ndim < 2]
               + [*model.head.parameters(), *model.embed.parameters()])
 # Create the optimizer
-optimizers = [Muon(muon_params, lr=0.02, momentum=0.95, rank=0, world_size=1),
-              torch.optim.AdamW(adamw_params, lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)]
-...
+optimizer = Muon(muon_params=muon_params, adamw_params=adamw_params, lr=0.02, momentum=0.95, weight_decay=0.01,
+                 adamw_lr=3e-4, adamw_betas=(0.90, 0.95), adamw_wd=0.01, rank=0, world_size=1)
 
 # in the training step
-for opt in optimizers:
-    opt.step()
+optimizer.step()
 ```
 
 You'll have to replace `model.body`, `model.head`, and `model.embed` with whatever subset is appropriate for your model.
 E.g., for a ConvNet, `muon_params` should be all the convolutional filters, and `adamw_params` should be everything else.
+
+### Don't use Muon on embedding, bias, or head parameters
+
+```python
+# This may lead to bad performance if your model has an embedding layer
+optimizer = Muon(muon_params=model.parameters())
+```
+
+### Troubleshooting
+
+Since Muon uses distributed computing internally, you might see this error:
+
+`Default process group has not been initialized, please make sure to call init_process_group.`
+
+To fix this error, you'll have to initialize PyTorch's distributed process group. Here's a simple way for one GPU.
+
+```python
+import torch.distributed as dist
+import os
+
+# Initialize for a single GPU
+os.environ['MASTER_ADDR'] = 'localhost'
+os.environ['MASTER_PORT'] = '12345'  # Any free port
+dist.init_process_group(backend='nccl', rank=0, world_size=1)
+
+optimizer = Muon(model.parameters(), model=model, rank=0, world_size=1)
+
+...
+
+# at the end of your code
+dist.destroy_process_group()
+```
 
 ## Example usage
 
