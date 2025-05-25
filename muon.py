@@ -1,10 +1,8 @@
-import os
 import torch
 import torch.distributed as dist
-from typing import Optional, List, Tuple
-from torch import Tensor
 
-def zeropower_via_newtonschulz5(G: Tensor, steps: int) -> Tensor:
+
+def zeropower_via_newtonschulz5(G, steps: int):
     """
     Newton-Schulz iteration to compute the zeroth power / orthogonalization of G. We opt to use a
     quintic iteration whose coefficients are selected to maximize the slope at zero. For the purpose
@@ -32,6 +30,17 @@ def zeropower_via_newtonschulz5(G: Tensor, steps: int) -> Tensor:
         X = X.mT
     return X
 
+
+def muon_update(grad, momentum, beta=0.95, ns_steps=5, nesterov=True):
+    momentum.lerp_(grad, 1 - beta)
+    update = grad.lerp_(momentum, beta) if nesterov else momentum
+    if update.ndim == 4: # for the case of conv filters
+        update = update.view(len(update), -1)
+    update = zeropower_via_newtonschulz5(update, steps=ns_steps)
+    update *= max(1, grad.size(-2) / grad.size(-1))**0.5
+    return update
+
+
 class Muon(torch.optim.Optimizer):
     """
     Muon - MomentUm Orthogonalized by Newton-schulz
@@ -40,212 +49,190 @@ class Muon(torch.optim.Optimizer):
 
     Muon internally runs standard SGD-momentum, and then performs an orthogonalization post-
     processing step, in which each 2D parameter's update is replaced with the nearest orthogonal
-    matrix. To efficiently orthogonalize each update, we use a Newton-Schulz iteration, which has
-    the advantage that it can be stably run in bfloat16 on the GPU.
+    matrix. For efficient orthogonalization we use a Newton-Schulz iteration, which has the
+    advantage that it can be stably run in bfloat16 on the GPU.
 
-    Some warnings:
-    - This optimizer should not be used for the embedding layer, the final fully connected layer,
-    or any {0,1}-D parameters; those should all be optimized by a standard method (e.g., AdamW).
-    - To use it with 4D convolutional filters, it works well to just flatten their last 3 dimensions.
-
-    Muon runs an internal AdamW for any parameters that are marked adamw_params. If you don't specify
-    muon_params or adamw_params, you can pass the model itself and Muon will auto-classify parameters.
-    Passing the model to an optimizer isn't standard PyTorch philosophy, but Muon is an architecture-
-    aware optimizer that treats linear weight parameters differently from embedding or bias parameters.
-    For more on the architecture-aware approach: https://arxiv.org/abs/2410.21265
-
-    Example usages:
-    >>> # Auto-classify all the model's parameters into Muon and AdamW (default)
-    >>> muon = Muon(params=model.parameters(), model=model)
-    >>> # Auto-classify and optimize over specific parameters only
-    >>> muon = Muon(params=params_sublist, model=model)
-    >>> # Specify explicitly which should use Muon and AdamW
-    >>> muon = Muon(muon_params=linear_params, adamw_params=embedding_and_head_params)
-    >>> # Use two optimizers (warns you not to put embedding/head params in Muon)
-    >>> muon, adamw = Muon(muon_params=muon_params), AdamW(params=adamw_params)
-
-    Common mistake:
-    >>> # This will perform poorly on the embedding/head params
-    >>> muon = Muon(muon_params=model.parameters())
+    Muon should only be used for hidden weight layers. The input embedding, final output layer,
+    and any internal gains or biases should be optimized using a standard method such as AdamW.
+    Hidden convolutional weights can be trained using Muon by viewing them as 2D and then
+    collapsing their last 3 dimensions.
 
     Arguments:
-        params: The parameters to optimize, auto-classified to use Muon or the internal AdamW.
-        model: The PyTorch model, required if auto-classifying parameters into Muon and AdamW.
-        muon_params: Overrides auto-classification and specifies which parameters should use Muon.
-        adamw_params: Overrides auto-classification and specifies which parameters should use AdamW.
-                      Any params in `muon_params` that are {0, 1}-D will be optimized by AdamW as well.
-        suppress_warning: Don't warn about a common mistake (using Muon on embedding/output params)
-        lr: The learning rate used by the internal SGD.
-        momentum: The momentum used by the internal SGD.
-        nesterov: Whether to use Nesterov-style momentum in the internal SGD. (recommended)
-        ns_steps: The number of Newton-Schulz iteration steps to use.
-        weight_decay: The weight decay for Muon parameters.
-        adamw_lr: The learning rate for the internal AdamW.
-        adamw_betas: The betas for the internal AdamW.
-        adamw_eps: The epsilon for the internal AdamW.
-        adamw_wd: The weight decay for the internal AdamW.
-        rank: The rank of the current GPU.    (use rank=0 for single GPU)
-        world_size: The total number of GPUs. (use world_size=1 for single GPU)
+        lr: The learning rate, in units of spectral norm per update.
+        weight_decay: The AdamW-style weight decay.
+        momentum: The momentum. A value of 0.95 here is usually fine.
     """
-    def __init__(self, params=None, model=None, muon_params=None, adamw_params=None, suppress_warning=False,
-                 lr=0.02, momentum=0.95, nesterov=True, ns_steps=5, weight_decay=0.01,
-                 adamw_lr=3e-4, adamw_betas=(0.95, 0.95), adamw_eps=1e-12, adamw_wd=0,
-                 rank=None, world_size=None):
-        if (rank is None) or (world_size is None):
-            raise Exception("world_size and rank params required, if you want to use this optimizer on a single GPU, pass rank=0 and world_size=1.")
-        self.rank = rank
-        self.world_size = world_size
-        defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps, weight_decay=weight_decay,
-                        adamw_lr_ratio=adamw_lr/lr, adamw_betas=adamw_betas, adamw_eps=adamw_eps, adamw_wd=adamw_wd)
-        muon_params, adamw_params = get_muon_and_adamw_params(
-            model=model, params=params, muon_params=muon_params, adamw_params=adamw_params, suppress_warning=suppress_warning
-        )
-        params: list[Tensor] = [*muon_params, *adamw_params]
-            
-        param_groups = []
-        for size in {p.numel() for p in params}:
-            b = torch.empty(world_size, size, dtype=torch.bfloat16, device="cuda")
-            group = dict(params=[p for p in params if p.numel() == size],
-                         update_buffer=b, update_buffer_views=[b[i] for i in range(world_size)])
-            param_groups.append(group)
-        super().__init__(param_groups, defaults)
-
-        # Mark parameters as Muon or AdamW
-        muon_param_ids = {id(p) for p in muon_params}
-        for param_group in self.param_groups:
-            for p in param_group['params']:
-                self.state[p]['use_muon'] = id(p) in muon_param_ids and p.ndim > 1
+    def __init__(self, params, lr=0.02, weight_decay=0, momentum=0.95):
+        defaults = dict(lr=lr, weight_decay=weight_decay, momentum=momentum)
+        assert isinstance(params, list) and len(params) >= 1 and isinstance(params[0], torch.nn.Parameter)
+        params = sorted(params, key=lambda x: x.size(), reverse=True)
+        super().__init__(params, defaults)
 
     @torch.no_grad()
     def step(self):
         for group in self.param_groups:
-            ############################
-            #           Muon           #
-            ############################
-            
-            params = [p for p in group['params'] if self.state[p]['use_muon']]
-            # generate weight updates in distributed fashion
-            update_buffer: Tensor = group["update_buffer"]
-            update_buffer_views: list[Tensor] = group["update_buffer_views"]
-            handle = None
-            params_world = None
-            def update_prev(): # optimized Muon implementation contributed by @YouJiacheng
-                handle.wait()
-                for p_world, g_world in zip(params_world, update_buffer_views):
-                    p_world.mul_(1 - group["lr"] * group["weight_decay"])
-                    p_world.add_(g_world.view_as(p_world),
-                                 alpha=-group["lr"] * max(1, p_world.size(-2) / p_world.size(-1))**0.5)
-            for base_i in range(len(params))[::self.world_size]:
-                if base_i + self.rank < len(params):
-                    p = params[base_i + self.rank]
-                    g = p.grad
-                    assert g is not None
+            params = group["params"]
+            params_pad = params + [torch.empty_like(params[-1])] * (len(params) % dist.get_world_size())
+            for base_i in range(len(params))[::dist.get_world_size()]:
+                if base_i + dist.get_rank() < len(params):
+                    p = params[base_i + dist.get_rank()]
                     state = self.state[p]
-                    if "momentum_buffer" not in state:
-                        state["momentum_buffer"] = torch.zeros_like(g)
-                    buf: Tensor = state["momentum_buffer"]
-                    buf.lerp_(g, 1 - group["momentum"])
-                    g = g.lerp_(buf, group["momentum"]) if group["nesterov"] else buf
-                    if g.ndim == 4: # for the case of conv filters
-                        g = g.view(len(g), -1)
-                    g = zeropower_via_newtonschulz5(g, steps=group["ns_steps"]).flatten()
-                else:
-                    g = update_buffer_views[self.rank]
-                if base_i > 0:
-                    update_prev() # async all_gather instead of sync all_reduce by @YouJiacheng
-                handle = dist.all_gather_into_tensor(update_buffer, g, async_op=True)
-                params_world = params[base_i : base_i + self.world_size]
-            update_prev()
-            
-            ############################
-            #       AdamW backup       #
-            ############################
-            
-            params = [p for p in group['params'] if not self.state[p]['use_muon']]
-            lr = group['adamw_lr_ratio'] * group['lr'] # in order for lr schedule to work
-            beta1, beta2 = group['adamw_betas']
-            eps = group['adamw_eps']
-            weight_decay = group['adamw_wd']
-            
-            for p in params:
-                g = p.grad
-                if g is None:
-                    continue
+                    if len(state) == 0:
+                        state["momentum_buffer"] = torch.zeros_like(p)
+                    update = muon_update(p.grad, state["momentum_buffer"], beta=group["momentum"])
+                    p.mul_(1 - group["lr"] * group["weight_decay"])
+                    p.add_(update, alpha=-group["lr"])
+                dist.all_gather(params_pad[base_i:base_i + dist.get_world_size()], params_pad[base_i + dist.get_rank()])
+
+
+class SingleDeviceMuon(torch.optim.Optimizer):
+    """
+    Muon variant for usage in non-distributed settings.
+    """
+    def __init__(self, params, lr=0.02, weight_decay=0, momentum=0.95):
+        defaults = dict(lr=lr, weight_decay=weight_decay, momentum=momentum)
+        super().__init__(params, defaults)
+
+    @torch.no_grad()
+    def step(self):
+        for group in self.param_groups:
+            for p in group["params"]:
                 state = self.state[p]
-                if 'step' not in state:
-                    state['step'] = 0
-                    state['moment1'] = torch.zeros_like(g)
-                    state['moment2'] = torch.zeros_like(g)
-                state['step'] += 1
-                step = state['step']
-                buf1 = state['moment1']
-                buf2 = state['moment2']
-                buf1.lerp_(g, 1-beta1)
-                buf2.lerp_(g.square(), 1-beta2)
-                
-                g = buf1 / (eps + buf2.sqrt())
-                
-                bias_correction1 = 1 - beta1**step
-                bias_correction2 = 1 - beta2**step
-                scale = bias_correction1 / bias_correction2**0.5
-                p.data.mul_(1 - lr * weight_decay)
-                p.data.add_(g, alpha=-lr/scale)
+                if len(state) == 0:
+                    state["momentum_buffer"] = torch.zeros_like(p)
+                update = muon_update(p.grad, state["momentum_buffer"], beta=group["momentum"])
+                p.mul_(1 - group["lr"] * group["weight_decay"])
+                p.add_(update, alpha=-group["lr"])
 
-def get_muon_and_adamw_params(
-    model: Optional[torch.nn.Module] = None,
-    params: Optional[List[torch.nn.Parameter]] = None,
-    muon_params: Optional[List[torch.nn.Parameter]] = None,
-    adamw_params: Optional[List[torch.nn.Parameter]] = None,
-    suppress_warning: bool = False,
-) -> Tuple[List[torch.nn.Parameter], List[torch.nn.Parameter]]:
+
+def adam_update(grad, buf1, buf2, step, betas, eps):
+    buf1.lerp_(grad, 1 - betas[0])
+    buf2.lerp_(grad.square(), 1 - betas[1])
+    buf1c = buf1 / (1 - betas[0]**step)
+    buf2c = buf2 / (1 - betas[1]**step)
+    return buf1c / (buf2c.sqrt() + eps)
+
+
+class MuonWithAuxAdam(torch.optim.Optimizer):
     """
-    Auto-classifies parameters into two groups:
-    1. Linear/conv weight parameters (for Muon)
-    2. Bias, embedding, and other (for AdamW)
+    Distributed Muon variant that can be used for all parameters in the network, since it runs an
+    internal AdamW for the parameters that are not compatible with Muon. The user must manually
+    specify which parameters shall be optimized with Muon and which with Adam by passing in a
+    list of param_groups with the `use_muon` flag set.
 
-    To directly specify, pass muon_params and adamw_params, and do not set model or params.
+    The point of this class is to allow the user to have a single Opimizer in their code, rather
+    than having both a Muon and an Adam which each need to be stepped.
 
-    Arguments:
-        model: full model required if auto-classifying parameters (default)
-        params: specific parameters to auto-classify into either Muon or AdamW
-        muon_params: overrides auto-classification and specifies which parameters should use Muon
-        adamw_params: overrides auto-classification and specifies which parameters should use AdamW
-        suppress_warning: don't warn about a common mistake (using Muon on embedding/output params)
+    You can see an example usage below:
+
+    https://github.com/KellerJordan/modded-nanogpt/blob/master/records/052525_MuonWithAuxAdamExample/b01550f9-03d8-4a9c-86fe-4ab434f1c5e0.txt#L470
+    ```
+    hidden_matrix_params = [p for n, p in model.blocks.named_parameters() if p.ndim >= 2 and "embed" not in n]
+    embed_params = [p for n, p in model.named_parameters() if "embed" in n]
+    scalar_params = [p for p in model.parameters() if p.ndim < 2]
+    head_params = [model.lm_head.weight]
+
+    from muon import MuonWithAuxAdam
+    adam_groups = [dict(params=head_params, lr=0.22), dict(params=embed_params, lr=0.6), dict(params=scalar_params, lr=0.04)]
+    adam_groups = [dict(**g, betas=(0.8, 0.95), eps=1e-10, use_muon=False) for g in adam_groups]
+    muon_group = dict(params=hidden_matrix_params, lr=0.05, momentum=0.95, use_muon=True)
+    param_groups = [*adam_groups, muon_group]
+    optimizer = MuonWithAuxAdam(param_groups)
+    ```
     """
-    assert (model is None and params is None) or (muon_params is None and adamw_params is None), (
-        "Cannot mix auto-classifying (params/model) with explicit parameter grouping (muon_params/adamw_params). For manual control, do not pass model or params."
-    )
-    if muon_params is not None and adamw_params is not None:
-        return muon_params, adamw_params
-    elif muon_params is not None:
-        if not suppress_warning:
-            print(
-                "Warning: you are optimizing all parameters with Muon, but did you mean to use the default optimizer "
-                "AdamW for bias or embedding parameters? To ignore this message, you can set suppress_warning=True."
-            )
-        return muon_params, []
-    elif adamw_params is not None:
-        return [], adamw_params
-    elif model is not None:
-        # Auto-classify into Muon or AdamW based on whether a param is a hidden layer parameter
-        params = params if params is not None else list(model.parameters())
-        embedding_ids = {id(m.weight) for m in model.modules() if isinstance(m, torch.nn.Embedding)}
-        def muon_criterion(module, param):
-            return (
-                param.ndim > 1 and
-                id(param) not in embedding_ids and  # prevents misclassifying tied embedding weights
-                isinstance(module, (torch.nn.Linear, torch.nn.Conv1d, torch.nn.Conv2d, torch.nn.Conv3d))
-            )
-        muon_param_ids = set()
-        for module in model.modules():
-            for param in module.parameters(recurse=False):
-                if muon_criterion(module, param):
-                    muon_param_ids.add(id(param))
-        muon_params = [p for p in params if id(p) in muon_param_ids]
-        adamw_params = [p for p in params if id(p) not in muon_param_ids]
-        return muon_params, adamw_params
-    else:
-        raise Exception(
-            "To auto-classify params to use Muon or its built-in AdamW, you need to pass the model like Muon(..., model=model). "
-            "If you want direct control over which params use Muon or AdamW, pass muon_params and adamw_params instead."
-        )
+    def __init__(self, param_groups):
+        for group in param_groups:
+            assert "use_muon" in group
+            if group["use_muon"]:
+                group["params"] = sorted(group["params"], key=lambda x: x.size(), reverse=True)
+                # defaults
+                group["lr"] = group.get("lr", 0.02)
+                group["momentum"] = group.get("momentum", 0.95)
+                group["weight_decay"] = group.get("weight_decay", 0)
+                assert set(group.keys()) == set(["params", "lr", "momentum", "weight_decay", "use_muon"])
+            else:
+                # defaults
+                group["lr"] = group.get("lr", 3e-4)
+                group["betas"] = group.get("betas", (0.9, 0.95))
+                group["eps"] = group.get("eps", 1e-10)
+                group["weight_decay"] = group.get("weight_decay", 0)
+                assert set(group.keys()) == set(["params", "lr", "betas", "eps", "weight_decay", "use_muon"])
+        super().__init__(param_groups, dict())
+
+    @torch.no_grad()
+    def step(self):
+        for group in self.param_groups:
+            if group["use_muon"]:
+                params = group["params"]
+                params_pad = params + [torch.empty_like(params[-1])] * (len(params) % dist.get_world_size())
+                for base_i in range(len(params))[::dist.get_world_size()]:
+                    if base_i + dist.get_rank() < len(params):
+                        p = params[base_i + dist.get_rank()]
+                        state = self.state[p]
+                        if len(state) == 0:
+                            state["momentum_buffer"] = torch.zeros_like(p)
+                        update = muon_update(p.grad, state["momentum_buffer"], beta=group["momentum"])
+                        p.mul_(1 - group["lr"] * group["weight_decay"])
+                        p.add_(update, alpha=-group["lr"])
+                    dist.all_gather(params_pad[base_i:base_i + dist.get_world_size()], params_pad[base_i + dist.get_rank()])
+            else:
+                beta1, beta2 = group["betas"]
+                for p in group["params"]:
+                    state = self.state[p]
+                    if len(state) == 0:
+                        state["exp_avg"] = torch.zeros_like(p)
+                        state["exp_avg_sq"] = torch.zeros_like(p)
+                        state["step"] = 0
+                    state["step"] += 1
+                    update = adam_update(p.grad, state["exp_avg"], state["exp_avg_sq"],
+                                         state["step"], group["betas"], group["eps"])
+                    p.mul_(1 - group["lr"] * group["weight_decay"])
+                    p.add_(update, alpha=-group["lr"])
+
+
+class SingleDeviceMuonWithAuxAdam(torch.optim.Optimizer):
+    """
+    Non-distributed variant of MuonWithAuxAdam.
+    """
+    def __init__(self, param_groups):
+        for group in param_groups:
+            assert "use_muon" in group
+            if group["use_muon"]:
+                # defaults
+                group["lr"] = group.get("lr", 0.02)
+                group["momentum"] = group.get("momentum", 0.95)
+                group["weight_decay"] = group.get("weight_decay", 0)
+                assert set(group.keys()) == set(["params", "lr", "momentum", "weight_decay", "use_muon"])
+            else:
+                # defaults
+                group["lr"] = group.get("lr", 3e-4)
+                group["betas"] = group.get("betas", (0.9, 0.95))
+                group["eps"] = group.get("eps", 1e-10)
+                group["weight_decay"] = group.get("weight_decay", 0)
+                assert set(group.keys()) == set(["params", "lr", "betas", "eps", "weight_decay", "use_muon"])
+        super().__init__(param_groups, dict())
+
+    @torch.no_grad()
+    def step(self):
+        for group in self.param_groups:
+            if group["use_muon"]:
+                for p in group["params"]:
+                    state = self.state[p]
+                    if len(state) == 0:
+                        state["momentum_buffer"] = torch.zeros_like(p)
+                    update = muon_update(p.grad, state["momentum_buffer"], beta=group["momentum"])
+                    p.mul_(1 - group["lr"] * group["weight_decay"])
+                    p.add_(update, alpha=-group["lr"])
+            else:
+                beta1, beta2 = group["betas"]
+                for p in group["params"]:
+                    state = self.state[p]
+                    if len(state) == 0:
+                        state["exp_avg"] = torch.zeros_like(p)
+                        state["exp_avg_sq"] = torch.zeros_like(p)
+                        state["step"] = 0
+                    state["step"] += 1
+                    update = adam_update(p.grad, state["exp_avg"], state["exp_avg_sq"],
+                                         state["step"], group["betas"], group["eps"])
+                    p.mul_(1 - group["lr"] * group["weight_decay"])
+                    p.add_(update, alpha=-group["lr"])
