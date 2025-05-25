@@ -8,6 +8,11 @@ This repo contains an implementation of the `Muon` optimizer originally describe
 pip install git+https://github.com/KellerJordan/Muon
 ```
 
+or
+```
+pip install muon_optimizer
+```
+
 ## Usage
 
 Muon is intended to optimize only the internal ≥2D parameters of a network.
@@ -15,6 +20,8 @@ Embeddings, classifier heads, and internal gains/biases should be optimized usin
 
 ```python
 # optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)
+
+# To replace the above, do the following:
 
 from muon import MuonWithAuxAdam
 # Find ≥2D parameters in the body of the network -- these should be optimized by Muon
