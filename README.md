@@ -31,7 +31,7 @@ optimizer = MuonWithAuxAdam([muon_group, adam_group])
 ```
 
 You'll have to replace `model.body`, `model.head`, and `model.embed` with whatever subset is appropriate for your model.
-E.g., for a ConvNet, `muon_params` should be all the convolutional filters, and `adamw_params` should be everything else.
+E.g., for a ConvNet, Muon should optimize all the convolutional filters except the first one, and AdamW should optimize everything else.
 
 ## Example usage
 
