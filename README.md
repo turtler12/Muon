@@ -18,13 +18,15 @@ Embeddings, classifier heads, and internal gains/biases should be optimized usin
 
 from muon import MuonWithAuxAdam
 # Find ≥2D parameters in the body of the network -- these should be optimized by Muon
-muon_params = [p for p in model.body.parameters() if p.ndim >= 2]
+hidden_weights = [p for p in model.body.parameters() if p.ndim >= 2]
 # Find everything else -- these should be optimized by AdamW
-adam_params = ([p for p in model.body.parameters() if p.ndim < 2]
-             + [*model.head.parameters(), *model.embed.parameters()])
+hidden_gains_biases = [p for p in model.body.parameters() if p.ndim < 2]
+exterior_weights = [*model.head.parameters(), *model.embed.parameters()])
 # Create the optimizer
-muon_group = dict(params=muon_params, lr=0.02, weight_decay=0.01, use_muon=True)
-adam_group = dict(params=adamw_params, lr=3e-4, betas=(0.9, 0.95), weight_decay=0.01, use_muon=False)
+# Note: you can also use multiple groups of each type with different hparams if you want.
+muon_group = dict(params=hidden_weights, lr=0.02, weight_decay=0.01, use_muon=True)
+adam_group = dict(params=hidden_gains_biases+exterior_weights, lr=3e-4,
+                  betas=(0.9, 0.95), weight_decay=0.01, use_muon=False)
 optimizer = MuonWithAuxAdam([muon_group, adam_group])
 ```
 
