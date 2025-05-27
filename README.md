@@ -17,6 +17,7 @@ pip install muon_optimizer
 
 Muon is an optimizer for the hidden weights of a neural network.
 Other parameters, such as embeddings, classifier heads, and hidden gains/biases should be optimized using standard AdamW.
+Muon should be used as follows:
 
 ```python
 # optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, betas=(0.90, 0.95), weight_decay=0.01)
@@ -24,12 +25,9 @@ Other parameters, such as embeddings, classifier heads, and hidden gains/biases 
 # To replace the above, do the following:
 
 from muon import MuonWithAuxAdam
-# Find the hidden weights, which can be optimized by Muon
 hidden_weights = [p for p in model.body.parameters() if p.ndim >= 2]
-# Everything else will be optimized by AdamW
 hidden_gains_biases = [p for p in model.body.parameters() if p.ndim < 2]
 exterior_weights = [*model.head.parameters(), *model.embed.parameters()])
-# Create the optimizer
 param_groups = [
     dict(params=hidden_weights, use_muon=True,
          lr=0.02, weight_decay=0.01),
