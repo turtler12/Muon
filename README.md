@@ -31,9 +31,10 @@ hidden_gains_biases = [p for p in model.body.parameters() if p.ndim < 2]
 exterior_weights = [*model.head.parameters(), *model.embed.parameters()])
 # Create the optimizer
 param_groups = [
-    dict(params=hidden_weights, lr=0.02, weight_decay=0.01, use_muon=True),
-    dict(params=hidden_gains_biases+exterior_weights, lr=3e-4,
-         betas=(0.9, 0.95), weight_decay=0.01, use_muon=False),
+    dict(params=hidden_weights, use_muon=True,
+         lr=0.02, weight_decay=0.01),
+    dict(params=hidden_gains_biases+exterior_weights, use_muon=False,
+         lr=3e-4, betas=(0.9, 0.95), weight_decay=0.01),
 ]
 optimizer = MuonWithAuxAdam(param_groups)
 ```
