@@ -39,8 +39,8 @@ param_groups = [
 optimizer = MuonWithAuxAdam(param_groups)
 ```
 
-You'll have to replace `model.body`, `model.head`, and `model.embed` with whatever subset is appropriate for your model.
-E.g., for a ConvNet, Muon should optimize all the convolutional filters except the first one, and AdamW should optimize everything else.
+You'll have to replace `model.body`, `model.head`, and `model.embed` with whatever is appropriate for your model.
+E.g., for a ConvNet, you should use Muon to optimize all the convolutional filters except the first one, and AdamW to optimize everything else.
 
 ## Example usage
 
@@ -50,8 +50,8 @@ E.g., for a ConvNet, Muon should optimize all the convolutional filters except t
 
 ## Hyperparameter tuning
 
-Typically, the default values of momentum (0.95), nesterov (True), and ns_steps (5) work well. The only hyperparameter which must be tuned is the learning rate.
-It should have constant muP scaling, that is, as you scale up the model size, you shouldn't need to retune the learning rate.
+Typically, the default values of momentum (0.95), nesterov (True), and ns_steps (5) work well. Only the learning rate and weight decay must be tuned.
+The learning rate should have constant muP scaling: That is, as you scale up the model size, you shouldn't need to retune the learning rate.
 
 ## Benchmarks
 
