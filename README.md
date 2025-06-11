@@ -61,6 +61,7 @@ For a comparison between AdamW, Shampoo, SOAP, and Muon for training a 124M-para
 * [Used to train a transformer to GPT-2 (XL) performance in $175 of compute](https://x.com/kellerjordan0/status/1850995958697308307)
 * [Improved the training speed record for attaining GPT-2 (small) performance by a factor of 1.35x](https://x.com/kellerjordan0/status/1842300916864844014)
 * [Used by the Kimi.ai frontier lab for scaled LLM training](https://x.com/Kimi_Moonshot/status/1893379158472044623)
+* [Ashish Vaswani's lab essential.ai showed that Muon is especially good for training with large batch size](https://arxiv.org/abs/2505.02222)
 
 ## More learning resources and results about Muon
 
