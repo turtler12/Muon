@@ -176,7 +176,6 @@ class MuonWithAuxAdam(torch.optim.Optimizer):
                         p.add_(update, alpha=-group["lr"])
                     dist.all_gather(params_pad[base_i:base_i + dist.get_world_size()], params_pad[base_i + dist.get_rank()])
             else:
-                beta1, beta2 = group["betas"]
                 for p in group["params"]:
                     state = self.state[p]
                     if len(state) == 0:
@@ -224,7 +223,6 @@ class SingleDeviceMuonWithAuxAdam(torch.optim.Optimizer):
                     p.mul_(1 - group["lr"] * group["weight_decay"])
                     p.add_(update, alpha=-group["lr"])
             else:
-                beta1, beta2 = group["betas"]
                 for p in group["params"]:
                     state = self.state[p]
                     if len(state) == 0:
