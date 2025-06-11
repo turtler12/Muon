@@ -72,7 +72,7 @@ class Muon(torch.optim.Optimizer):
     def step(self):
         for group in self.param_groups:
             params = group["params"]
-            params_pad = params + [torch.empty_like(params[-1])] * (len(params) % dist.get_world_size())
+            params_pad = params + [torch.empty_like(params[-1])] * (dist.get_world_size() - len(params) % dist.get_world_size())
             for base_i in range(len(params))[::dist.get_world_size()]:
                 if base_i + dist.get_rank() < len(params):
                     p = params[base_i + dist.get_rank()]
@@ -164,7 +164,7 @@ class MuonWithAuxAdam(torch.optim.Optimizer):
         for group in self.param_groups:
             if group["use_muon"]:
                 params = group["params"]
-                params_pad = params + [torch.empty_like(params[-1])] * (len(params) % dist.get_world_size())
+                params_pad = params + [torch.empty_like(params[-1])] * (dist.get_world_size() - len(params) % dist.get_world_size())
                 for base_i in range(len(params))[::dist.get_world_size()]:
                     if base_i + dist.get_rank() < len(params):
                         p = params[base_i + dist.get_rank()]
