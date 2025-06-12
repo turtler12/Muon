@@ -120,7 +120,7 @@ class MuonWithAuxAdam(torch.optim.Optimizer):
     specify which parameters shall be optimized with Muon and which with Adam by passing in a
     list of param_groups with the `use_muon` flag set.
 
-    The point of this class is to allow the user to have a single Opimizer in their code, rather
+    The point of this class is to allow the user to have a single optimizer in their code, rather
     than having both a Muon and an Adam which each need to be stepped.
 
     You can see an example usage below:
