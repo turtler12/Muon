@@ -69,7 +69,13 @@ class Muon(torch.optim.Optimizer):
         super().__init__(params, defaults)
 
     @torch.no_grad()
-    def step(self):
+    def step(self, closure=None):
+
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+
         for group in self.param_groups:
             params = group["params"]
             params_pad = params + [torch.empty_like(params[-1])] * (dist.get_world_size() - len(params) % dist.get_world_size())
@@ -84,6 +90,8 @@ class Muon(torch.optim.Optimizer):
                     p.add_(update.reshape(p.shape), alpha=-group["lr"])
                 dist.all_gather(params_pad[base_i:base_i + dist.get_world_size()], params_pad[base_i + dist.get_rank()])
 
+        return loss
+
 
 class SingleDeviceMuon(torch.optim.Optimizer):
     """
@@ -94,7 +102,13 @@ class SingleDeviceMuon(torch.optim.Optimizer):
         super().__init__(params, defaults)
 
     @torch.no_grad()
-    def step(self):
+    def step(self, closure=None):
+
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+
         for group in self.param_groups:
             for p in group["params"]:
                 state = self.state[p]
@@ -103,6 +117,8 @@ class SingleDeviceMuon(torch.optim.Optimizer):
                 update = muon_update(p.grad, state["momentum_buffer"], beta=group["momentum"])
                 p.mul_(1 - group["lr"] * group["weight_decay"])
                 p.add_(update.reshape(p.shape), alpha=-group["lr"])
+
+        return loss
 
 
 def adam_update(grad, buf1, buf2, step, betas, eps):
@@ -160,7 +176,13 @@ class MuonWithAuxAdam(torch.optim.Optimizer):
         super().__init__(param_groups, dict())
 
     @torch.no_grad()
-    def step(self):
+    def step(self, closure=None):
+
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+
         for group in self.param_groups:
             if group["use_muon"]:
                 params = group["params"]
@@ -188,6 +210,8 @@ class MuonWithAuxAdam(torch.optim.Optimizer):
                     p.mul_(1 - group["lr"] * group["weight_decay"])
                     p.add_(update, alpha=-group["lr"])
 
+        return loss
+
 
 class SingleDeviceMuonWithAuxAdam(torch.optim.Optimizer):
     """
@@ -212,7 +236,13 @@ class SingleDeviceMuonWithAuxAdam(torch.optim.Optimizer):
         super().__init__(param_groups, dict())
 
     @torch.no_grad()
-    def step(self):
+    def step(self, closure=None):
+
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+
         for group in self.param_groups:
             if group["use_muon"]:
                 for p in group["params"]:
@@ -234,3 +264,5 @@ class SingleDeviceMuonWithAuxAdam(torch.optim.Optimizer):
                                          state["step"], group["betas"], group["eps"])
                     p.mul_(1 - group["lr"] * group["weight_decay"])
                     p.add_(update, alpha=-group["lr"])
+
+        return loss
