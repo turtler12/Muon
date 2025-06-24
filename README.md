@@ -27,7 +27,7 @@ Muon should be used as follows:
 from muon import MuonWithAuxAdam
 hidden_weights = [p for p in model.body.parameters() if p.ndim >= 2]
 hidden_gains_biases = [p for p in model.body.parameters() if p.ndim < 2]
-nonhidden_params = [*model.head.parameters(), *model.embed.parameters()])
+nonhidden_params = [*model.head.parameters(), *model.embed.parameters()]
 param_groups = [
     dict(params=hidden_weights, use_muon=True,
          lr=0.02, weight_decay=0.01),
