@@ -49,7 +49,7 @@ E.g., for a ConvNet, you should use Muon to optimize all the convolutional filte
 ## Hyperparameter tuning
 
 Typically, the default values of momentum (0.95), nesterov (True), and ns_steps (5) work well. Only the learning rate and weight decay must be tuned.
-The learning rate should have constant muP scaling: That is, as you scale up the model size, you shouldn't need to retune it.
+The learning rate should have built-in muP scaling: That is, as you scale up the model size, you shouldn't need to retune it.
 
 ## Benchmarks
 
