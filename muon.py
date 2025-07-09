@@ -83,7 +83,8 @@ class Muon(torch.optim.Optimizer):
                 if base_i + dist.get_rank() < len(params):
                     p = params[base_i + dist.get_rank()]
                     if p.grad is None:
-                        continue
+                        # continue
+                        p.grad = torch.zeros_like(p)  # Force synchronization
                     state = self.state[p]
                     if len(state) == 0:
                         state["momentum_buffer"] = torch.zeros_like(p)
@@ -114,7 +115,8 @@ class SingleDeviceMuon(torch.optim.Optimizer):
         for group in self.param_groups:
             for p in group["params"]:
                 if p.grad is None:
-                    continue
+                    # continue
+                    p.grad = torch.zeros_like(p)  # Force synchronization
                 state = self.state[p]
                 if len(state) == 0:
                     state["momentum_buffer"] = torch.zeros_like(p)
@@ -195,7 +197,8 @@ class MuonWithAuxAdam(torch.optim.Optimizer):
                     if base_i + dist.get_rank() < len(params):
                         p = params[base_i + dist.get_rank()]
                         if p.grad is None:
-                            continue
+                            # continue
+                            p.grad = torch.zeros_like(p)  # Force synchronization
                         state = self.state[p]
                         if len(state) == 0:
                             state["momentum_buffer"] = torch.zeros_like(p)
@@ -205,6 +208,9 @@ class MuonWithAuxAdam(torch.optim.Optimizer):
                     dist.all_gather(params_pad[base_i:base_i + dist.get_world_size()], params_pad[base_i + dist.get_rank()])
             else:
                 for p in group["params"]:
+                    if p.grad is None:
+                        # continue
+                        p.grad = torch.zeros_like(p)  # Force synchronization
                     state = self.state[p]
                     if len(state) == 0:
                         state["exp_avg"] = torch.zeros_like(p)
@@ -253,7 +259,8 @@ class SingleDeviceMuonWithAuxAdam(torch.optim.Optimizer):
             if group["use_muon"]:
                 for p in group["params"]:
                     if p.grad is None:
-                        continue
+                        # continue
+                        p.grad = torch.zeros_like(p)  # Force synchronization
                     state = self.state[p]
                     if len(state) == 0:
                         state["momentum_buffer"] = torch.zeros_like(p)
@@ -262,6 +269,9 @@ class SingleDeviceMuonWithAuxAdam(torch.optim.Optimizer):
                     p.add_(update.reshape(p.shape), alpha=-group["lr"])
             else:
                 for p in group["params"]:
+                    if p.grad is None:
+                        # continue
+                        p.grad = torch.zeros_like(p)  # Force synchronization
                     state = self.state[p]
                     if len(state) == 0:
                         state["exp_avg"] = torch.zeros_like(p)
