@@ -8,11 +8,6 @@ This repo contains an implementation of the `Muon` optimizer originally describe
 pip install git+https://github.com/KellerJordan/Muon
 ```
 
-or
-```
-pip install muon_optimizer
-```
-
 ## Usage
 
 Muon is an optimizer for the hidden weights of a neural network.
