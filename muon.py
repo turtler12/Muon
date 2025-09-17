@@ -569,8 +569,8 @@ def compare_muon_with_adam_logistic_regression():
 
 #%%
 if __name__ == "__main__":
-    #muon_on_linear_regression_scenario()
+    muon_on_linear_regression_scenario()
     #muon_on_simple_dome()
     #muon_logistic_regression()
-    compare_muon_with_adam_logistic_regression()
+    #compare_muon_with_adam_logistic_regression()
 # %%
